@@ -366,7 +366,7 @@ export default function Page() {
 
                   <div className="rounded-2xl bg-white shadow p-6">
                     <div className="text-lg font-semibold text-slate-900 mb-2">Gradebook Chart</div>
-                    <GradebookComboChart data={gradeModuleMetrics as any[]} />
+                    <GradebookComboChart rows={gradeModuleMetrics as any[]} />
                   </div>
                 </div>
               )}
