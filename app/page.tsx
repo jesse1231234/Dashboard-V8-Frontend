@@ -336,6 +336,60 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+
+  async function downloadTablesXlsx() {
+    if (!result) return;
+
+    // Lazy-load to keep initial bundle smaller
+    const XLSX = await import("xlsx");
+
+    const wb = XLSX.utils.book_new();
+
+    const addSheet = (name: string, rows: AnyRow[], columns?: string[]) => {
+      const safeName = (name || "Sheet").slice(0, 31);
+      const ordered =
+        columns && columns.length
+          ? rows.map((r) => {
+              const o: AnyRow = {};
+              columns.forEach((c) => (o[c] = r?.[c]));
+              // include any extra keys at the end so we don't silently drop data
+              Object.keys(r || {}).forEach((k) => {
+                if (!(k in o)) o[k] = r[k];
+              });
+              return o;
+            })
+          : rows;
+
+      const ws = XLSX.utils.json_to_sheet(ordered);
+      XLSX.utils.book_append_sheet(wb, ws, safeName);
+    };
+
+    addSheet("Echo Summary", echoSummary, ECHO_SUMMARY_COLS);
+    addSheet("Echo Modules", echoModules, ECHO_MODULE_COLS);
+    addSheet(
+      "Gradebook Summary",
+      gradeSummary,
+      gradeSummary?.[0]?.Metric
+        ? ["Metric", ...Object.keys(gradeSummary[0]).filter((k) => k !== "Metric")]
+        : undefined
+    );
+    addSheet("Gradebook Modules", gradeModuleMetrics, GRADEBOOK_MODULE_COLS);
+
+    const out = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    const blob = new Blob([out], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+
+    const filename = `cle_analytics_tables_${courseId || "course"}.xlsx`;
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
   }
 
   return (
@@ -499,8 +553,19 @@ export default function Home() {
 
             {activeTab === "exports" && (
               <div className="rounded-2xl bg-white shadow p-6">
-                <div className="text-lg font-semibold text-slate-900 mb-2">Exports</div>
-                <div className="text-sm text-slate-600">Add your CSV export buttons here.</div>
+                <div className="text-lg font-semibold text-slate-900 mb-4">Exports</div>
+
+                <button
+                  onClick={downloadTablesXlsx}
+                  disabled={!result}
+                  className="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm disabled:opacity-60"
+                >
+                  Download tables (XLSX)
+                </button>
+
+                <div className="mt-3 text-xs text-slate-600">
+                  Creates one workbook with each table in its own sheet (Echo Summary, Echo Modules, Gradebook Summary, Gradebook Modules).
+                </div>
               </div>
             )}
 
