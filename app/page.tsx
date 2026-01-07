@@ -24,7 +24,11 @@ type AnalyzeResponse = {
   };
 };
 
-function downloadTablesAsXlsx(sheets: { name: string; rows: AnyRow[] }[], filename: string) {
+// --- XLSX Export helper (added) ---
+function downloadTablesAsXlsx(
+  sheets: { name: string; rows: Record<string, any>[] }[],
+  filename: string
+) {
   const wb = XLSX.utils.book_new();
 
   for (const sheet of sheets) {
@@ -33,7 +37,7 @@ function downloadTablesAsXlsx(sheets: { name: string; rows: AnyRow[] }[], filena
     XLSX.utils.book_append_sheet(wb, ws, sheet.name);
   }
 
-  // If all tables are empty, still produce a file with a note sheet
+  // If everything is empty, still generate a file with a note.
   if (wb.SheetNames.length === 0) {
     const ws = XLSX.utils.aoa_to_sheet([["No tables available to export. Run an analysis first."]]);
     XLSX.utils.book_append_sheet(wb, ws, "Readme");
@@ -41,7 +45,9 @@ function downloadTablesAsXlsx(sheets: { name: string; rows: AnyRow[] }[], filena
 
   XLSX.writeFile(wb, filename);
 }
+// --- end XLSX Export helper ---
 
+// ---- Column presets ----
 const ECHO_SUMMARY_COLS = [
   "Video Duration",
   "# of Unique Views",
@@ -58,120 +64,111 @@ const GRADEBOOK_MODULE_COLS = ["Module", "Avg % Turned In", "Avg Average Excludi
 
 const ECHO_SUMMARY_PERCENT_COLS = ["Average View %", "% of Students Viewing", "% of Video Viewed Overall"];
 const ECHO_MODULE_PERCENT_COLS = ["Average View %", "Overall View %", "# of Students Viewing"];
-
 const GRADEBOOK_MODULE_PERCENT_COLS = ["Avg % Turned In", "Avg Average Excluding Zeros"];
 
-function Badge({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-700">
-      {children}
-    </span>
-  );
+// ---- Formatters ----
+function toNumber(v: any): number | null {
+  if (v === null || v === undefined) return null;
+  if (typeof v === "number") return Number.isFinite(v) ? v : null;
+  const s = String(v).trim();
+  if (!s) return null;
+  const n = Number(s.replace(/,/g, ""));
+  return Number.isFinite(n) ? n : null;
 }
 
-function FilePicker({
-  label,
-  accept,
-  onFile,
-}: {
-  label: string;
-  accept: string;
-  onFile: (f: File | null) => void;
-}) {
-  return (
-    <label className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="text-sm font-medium text-slate-900">{label}</div>
-      <input
-        type="file"
-        accept={accept}
-        className="block w-full text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800"
-        onChange={(e) => onFile(e.target.files?.[0] ?? null)}
-      />
-    </label>
-  );
+function formatNumberCell(n: number) {
+  if (!Number.isFinite(n)) return "";
+  if (Math.abs(n) >= 1000) return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
 }
 
-function KpiCard({ label, value }: { label: string; value: any }) {
-  return (
-    <div className="rounded-2xl bg-white shadow p-4">
-      <div className="text-xs text-slate-500">{label}</div>
-      <div className="text-xl font-semibold text-slate-900 mt-1">{value ?? "—"}</div>
-    </div>
-  );
+function formatPercentCell(v: any) {
+  const n = toNumber(v);
+  if (n === null) return "";
+  const pct = n * 100;
+  return `${pct.toFixed(1)}%`;
+}
+
+function formatCell(key: string, value: any, percentCols?: string[]) {
+  if (value === null || value === undefined) return "";
+  if (percentCols?.includes(key)) return formatPercentCell(value);
+  const n = toNumber(value);
+  if (n !== null) return formatNumberCell(n);
+  return String(value);
+}
+
+// ---- Table ----
+function buildColWidths(rows: Row[], cols: string[], percentCols?: string[]) {
+  const maxChar = (s: string) => Math.min(36, Math.max(8, s.length));
+  const widths: Record<string, number> = {};
+
+  for (const c of cols) widths[c] = maxChar(c);
+  for (const r of rows.slice(0, 50)) {
+    for (const c of cols) {
+      const val = formatCell(c, r?.[c], percentCols);
+      widths[c] = Math.max(widths[c], maxChar(val));
+    }
+  }
+  return widths;
 }
 
 function Table({
-  title,
   rows,
+  title,
   columns,
-  maxRows = 100,
-  percentCols = [],
+  percentCols,
 }: {
-  title: string;
   rows: Row[];
-  columns: string[];
-  maxRows?: number;
+  title?: string;
+  columns?: string[];
   percentCols?: string[];
 }) {
-  const safeRows = rows ?? [];
-  const limited = safeRows.slice(0, maxRows);
+  const cols = useMemo(() => {
+    if (columns?.length) return columns;
+    if (rows?.length) return Object.keys(rows[0]);
+    return [];
+  }, [columns, rows]);
 
-  const formatCell = (col: string, val: any) => {
-    if (val === null || val === undefined) return "—";
-    if (percentCols.includes(col) && typeof val === "number") {
-      // if already in 0-100 scale, keep; if 0-1, scale
-      const v = val <= 1 ? val * 100 : val;
-      return `${v.toFixed(1)}%`;
-    }
-    if (typeof val === "number") {
-      return Number.isInteger(val) ? val.toString() : val.toFixed(2);
-    }
-    return String(val);
-  };
+  const colWidths = useMemo(() => buildColWidths(rows ?? [], cols, percentCols), [rows, cols, percentCols]);
 
   return (
     <div className="rounded-2xl bg-white shadow p-6">
-      <div className="flex items-center justify-between mb-3">
-        <div className="text-lg font-semibold text-slate-900">{title}</div>
-        <Badge>{safeRows.length} rows</Badge>
-      </div>
+      {title && <div className="text-lg font-semibold text-slate-900 mb-2">{title}</div>}
 
-      <div className="overflow-x-auto">
-        <table className="min-w-full border-collapse text-sm">
-          <thead>
-            <tr className="border-b border-slate-200">
-              {columns.map((c) => (
-                <th key={c} className="text-left font-semibold text-slate-700 py-2 pr-4 whitespace-nowrap">
-                  {c}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {limited.length === 0 ? (
-              <tr>
-                <td className="py-3 text-slate-500" colSpan={columns.length}>
-                  No data.
-                </td>
+      {(!rows || rows.length === 0) && <div className="text-sm text-slate-600">No data.</div>}
+
+      {rows && rows.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="min-w-full border-collapse text-sm">
+            <thead>
+              <tr className="border-b border-slate-200">
+                {cols.map((c) => (
+                  <th
+                    key={c}
+                    className="text-left font-semibold text-slate-700 py-2 pr-4 whitespace-nowrap"
+                    style={{ minWidth: `${colWidths[c] ?? 10}ch` }}
+                  >
+                    {c}
+                  </th>
+                ))}
               </tr>
-            ) : (
-              limited.map((r, i) => (
+            </thead>
+            <tbody>
+              {rows.map((r, i) => (
                 <tr key={i} className="border-b border-slate-100">
-                  {columns.map((c) => (
-                    <td key={c} className="py-2 pr-4 text-slate-800 whitespace-nowrap">
-                      {formatCell(c, r?.[c])}
+                  {cols.map((c) => (
+                    <td
+                      key={c}
+                      className="py-2 pr-4 text-slate-800 whitespace-nowrap"
+                      style={{ minWidth: `${colWidths[c] ?? 10}ch` }}
+                    >
+                      {formatCell(c, r[c], percentCols)}
                     </td>
                   ))}
                 </tr>
-              ))
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {safeRows.length > maxRows && (
-        <div className="mt-3 text-xs text-slate-500">
-          Showing first {maxRows} rows. Export to view the full dataset.
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
     </div>
@@ -180,12 +177,11 @@ function Table({
 
 export default function Page() {
   const [courseId, setCourseId] = useState("");
-  const [gradebookCsv, setGradebookCsv] = useState<File | null>(null);
+  const [canvasCsv, setCanvasCsv] = useState<File | null>(null);
   const [echoCsv, setEchoCsv] = useState<File | null>(null);
 
   const [activeTab, setActiveTab] = useState<"tables" | "charts" | "exports" | "ai">("tables");
 
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<AnalyzeResponse | null>(null);
 
@@ -193,13 +189,12 @@ export default function Page() {
 
   const echoSummary = result?.echo?.summary ?? [];
   const echoModules = result?.echo?.modules ?? [];
-
   const gradeSummary = result?.grades?.summary ?? [];
   const gradeModuleMetrics = result?.grades?.module_metrics ?? [];
 
+  // --- XLSX download handler (added) ---
   const downloadTablesXlsx = () => {
     if (!result) return;
-
     downloadTablesAsXlsx(
       [
         { name: "Echo Summary", rows: echoSummary },
@@ -210,24 +205,34 @@ export default function Page() {
       "course_analytics_tables.xlsx"
     );
   };
+  // --- end XLSX download handler ---
 
   const gradeSummaryPercentCols = useMemo(() => {
     if (!gradeSummary?.[0]) return [];
     return Object.keys(gradeSummary[0]).filter((k) => k !== "Metric");
   }, [gradeSummary]);
 
-  const canRun = !!courseId && !!gradebookCsv && !!echoCsv && !!apiBase;
-
   async function runAnalysis() {
     setError(null);
-    setLoading(true);
-    setResult(null);
+
+    if (!apiBase) {
+      setError("Missing NEXT_PUBLIC_API_BASE_URL environment variable in Vercel.");
+      return;
+    }
+    if (!courseId.trim()) {
+      setError("Please enter a Canvas Course ID (number).");
+      return;
+    }
+    if (!canvasCsv || !echoCsv) {
+      setError("Please upload both the Canvas Gradebook CSV and Echo Analytics CSV.");
+      return;
+    }
 
     try {
       const form = new FormData();
       form.append("course_id", courseId);
-      form.append("canvas_gradebook_csv", gradebookCsv as File);
-      form.append("echo_analytics_csv", echoCsv as File);
+      form.append("canvas_gradebook_csv", canvasCsv);
+      form.append("echo_analytics_csv", echoCsv);
 
       const res = await fetch(`${apiBase}/analyze`, {
         method: "POST",
@@ -236,7 +241,8 @@ export default function Page() {
 
       if (!res.ok) {
         const txt = await res.text();
-        throw new Error(`Backend error (${res.status}): ${txt}`);
+        setError(`Backend error (${res.status}): ${txt}`);
+        return;
       }
 
       const json = (await res.json()) as AnalyzeResponse;
@@ -244,12 +250,9 @@ export default function Page() {
       setActiveTab("tables");
     } catch (e: any) {
       setError(e?.message ?? "Unknown error");
-    } finally {
-      setLoading(false);
     }
   }
 
-  // auto-switch to tables when new result arrives
   useEffect(() => {
     if (result) setActiveTab("tables");
   }, [result]);
@@ -262,16 +265,17 @@ export default function Page() {
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <div className="text-2xl font-bold text-slate-900">CLE Analytics Dashboard</div>
-                <div className="text-sm text-slate-600">Upload your Canvas Gradebook + Echo360 Analytics and run analysis.</div>
+                <div className="text-sm text-slate-600">
+                  Upload your Canvas Gradebook + Echo360 Analytics and run analysis.
+                </div>
               </div>
 
               <div className="flex items-center gap-3">
                 <button
                   onClick={runAnalysis}
-                  disabled={!canRun || loading}
-                  className="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold disabled:opacity-60"
+                  className="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm font-semibold"
                 >
-                  {loading ? "Running..." : "Run Analysis"}
+                  Run Analysis
                 </button>
               </div>
             </div>
@@ -292,8 +296,25 @@ export default function Page() {
                 )}
               </div>
 
-              <FilePicker label="Canvas Gradebook CSV" accept=".csv" onFile={setGradebookCsv} />
-              <FilePicker label="Echo360 Analytics CSV" accept=".csv" onFile={setEchoCsv} />
+              <label className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="text-sm font-medium text-slate-900">Canvas Gradebook CSV</div>
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="block w-full text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800"
+                  onChange={(e) => setCanvasCsv(e.target.files?.[0] ?? null)}
+                />
+              </label>
+
+              <label className="flex flex-col gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="text-sm font-medium text-slate-900">Echo360 Analytics CSV</div>
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="block w-full text-sm text-slate-700 file:mr-4 file:rounded-xl file:border-0 file:bg-slate-900 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white hover:file:bg-slate-800"
+                  onChange={(e) => setEchoCsv(e.target.files?.[0] ?? null)}
+                />
+              </label>
             </div>
 
             {error && <div className="mt-4 text-sm text-red-700">{error}</div>}
@@ -301,12 +322,6 @@ export default function Page() {
 
           {result && (
             <div className="grid gap-4">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {Object.entries(result.kpis ?? {}).map(([k, v]) => (
-                  <KpiCard key={k} label={k} value={v} />
-                ))}
-              </div>
-
               <div className="flex gap-2 flex-wrap">
                 {(["tables", "charts", "exports", "ai"] as const).map((t) => (
                   <button
@@ -328,7 +343,6 @@ export default function Page() {
                     rows={echoSummary}
                     columns={ECHO_SUMMARY_COLS}
                     percentCols={ECHO_SUMMARY_PERCENT_COLS}
-                    maxRows={200}
                   />
 
                   <Table
@@ -336,7 +350,6 @@ export default function Page() {
                     rows={echoModules}
                     columns={ECHO_MODULE_COLS}
                     percentCols={ECHO_MODULE_PERCENT_COLS}
-                    maxRows={200}
                   />
 
                   <Table
@@ -344,7 +357,6 @@ export default function Page() {
                     rows={gradeSummary}
                     columns={gradeSummary?.[0] ? Object.keys(gradeSummary[0]) : ["Metric"]}
                     percentCols={gradeSummaryPercentCols}
-                    maxRows={200}
                   />
 
                   <Table
@@ -352,7 +364,6 @@ export default function Page() {
                     rows={gradeModuleMetrics}
                     columns={GRADEBOOK_MODULE_COLS}
                     percentCols={GRADEBOOK_MODULE_PERCENT_COLS}
-                    maxRows={200}
                   />
                 </div>
               )}
@@ -366,7 +377,7 @@ export default function Page() {
 
                   <div className="rounded-2xl bg-white shadow p-6">
                     <div className="text-lg font-semibold text-slate-900 mb-2">Gradebook Chart</div>
-                    <GradebookComboChart rows={gradeModuleMetrics as any[]} />
+                    <GradebookComboChart rows={gradeModuleMetrics as any} />
                   </div>
                 </div>
               )}
@@ -395,7 +406,6 @@ export default function Page() {
               {activeTab === "ai" && (
                 <div className="rounded-2xl bg-white shadow p-6">
                   <div className="text-lg font-semibold text-slate-900 mb-2">AI Analysis</div>
-
                   {result?.analysis?.error ? (
                     <div className="text-sm text-red-700">{result.analysis.error}</div>
                   ) : (
