@@ -249,9 +249,7 @@ function Table({
                 {slice.map((r, idx) => (
                   <tr
                     key={idx}
-                    className={
-                      "border-t border-slate-200/60 " + (idx % 2 === 0 ? "bg-white" : "bg-slate-50/40")
-                    }
+                    className="border-t border-slate-200/60 odd:bg-white even:bg-slate-100"
                   >
                     {cols.map((c) => {
                       const textHeavy = isTextHeavyCol(c);
