@@ -94,7 +94,7 @@ export default function GradebookComboChart({
                 return [`${(n * 100).toFixed(1)}%`, name];
               }}
             />
-            <Legend verticalAlign="top" align="left" />
+            <Legend verticalAlign="top" align="left" wrapperStyle={{ paddingBottom: 8 }} />
 
             {hasA && (
               <Line
