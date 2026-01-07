@@ -2,6 +2,44 @@
 @tailwind components;
 @tailwind utilities;
 
+/* App baseline */
+:root {
+  color-scheme: light;
+}
+
 body {
-  @apply bg-slate-100 text-slate-900;
+  @apply bg-slate-50 text-slate-900 antialiased;
+}
+
+/* High-visibility focus (keyboard users) */
+:focus-visible {
+  outline: 3px solid #1e4d2b; /* CSU green */
+  outline-offset: 2px;
+}
+
+/* Make form controls look intentional without changing structure */
+input[type="text"],
+input[type="file"],
+select,
+textarea {
+  @apply rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900;
+}
+
+input::placeholder,
+textarea::placeholder {
+  @apply text-slate-400;
+}
+
+/* Reduce “jumpy” layout when errors appear */
+html {
+  scrollbar-gutter: stable;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    transition: none !important;
+    animation: none !important;
+  }
 }
