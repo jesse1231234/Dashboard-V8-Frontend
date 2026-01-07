@@ -249,8 +249,9 @@ function Table({
                 {slice.map((r, idx) => (
                   <tr
                     key={idx}
-                    className="border-t border-slate-200/60 odd:bg-white even:bg-slate-100"
+                    className="border-t border-slate-200/60"
                   >
+
                     {cols.map((c) => {
                       const textHeavy = isTextHeavyCol(c);
                       return (
@@ -258,10 +259,11 @@ function Table({
                           key={c}
                           className={`px-2 py-2 text-[13px] leading-5 text-slate-800 align-top ${
                             textHeavy ? "break-words" : "whitespace-nowrap"
-                          }`}
+                          } ${idx % 2 === 0 ? "border-l-2 border-l-transparent" : "border-l-2 border-l-slate-200"}`}
                         >
                           {formatCell(c, r[c], percentCols)}
                         </td>
+
                       );
                     })}
                   </tr>
