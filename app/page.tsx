@@ -270,7 +270,7 @@ function Table({
 
 export default function Home() {
   const [step, setStep] = useState<1 | 2 | 3>(1);
-  const [activeTab, setActiveTab] = useState<"tables" | "charts" | "exports" | "ai">("tables");
+  const [activeTab, setActiveTab] = useState<"tables" | "charts" | "ai">("tables");
 
   const [courseId, setCourseId] = useState("");
   const [canvasCsv, setCanvasCsv] = useState<File | null>(null);
@@ -424,7 +424,7 @@ export default function Home() {
         {step === 3 && (
           <div>
             <div className="mb-4 flex flex-wrap gap-2">
-              {(["tables", "charts", "exports", "ai"] as const).map((t) => (
+              {(["tables", "charts", "ai"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => setActiveTab(t)}
@@ -436,8 +436,6 @@ export default function Home() {
                     ? "Tables"
                     : t === "charts"
                     ? "Charts"
-                    : t === "exports"
-                    ? "Exports"
                     : "AI Analysis"}
                 </button>
               ))}
@@ -494,13 +492,6 @@ export default function Home() {
                   <div className="text-lg font-semibold text-slate-900 mb-2">Gradebook Chart</div>
                   <GradebookComboChart rows={gradeModuleMetrics as any} />
                 </div>
-              </div>
-            )}
-
-            {activeTab === "exports" && (
-              <div className="rounded-2xl bg-white shadow p-6">
-                <div className="text-lg font-semibold text-slate-900 mb-2">Exports</div>
-                <div className="text-sm text-slate-600">Add your CSV export buttons here.</div>
               </div>
             )}
 
