@@ -605,7 +605,7 @@ export default function Home() {
                 {result?.analysis?.error ? (
                   <div className="text-sm text-red-700">{result.analysis.error}</div>
                 ) : (
-                  <pre className="text-sm whitespace-pre-wrap text-slate-800">
+                  <pre className="text-sm font-sans whitespace-pre-wrap text-slate-800">
                     {result?.analysis?.text ?? "No AI analysis returned."}
                   </pre>
                 )}
