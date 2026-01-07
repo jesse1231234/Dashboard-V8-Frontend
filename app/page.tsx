@@ -198,7 +198,7 @@ function Table({
   }, [rows, cols.join("|"), (percentCols ?? []).join("|"), maxRows]);
 
   return (
-    <div className="rounded-2xl bg-white shadow p-4 min-w-0">
+    <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-4 min-w-0">
       <div className="mb-3">
         <div className="text-sm font-semibold text-slate-900">{title}</div>
         <div className="text-xs text-slate-500">
@@ -213,9 +213,12 @@ function Table({
         // Individual table scroll container (x + y), with a fixed max height and sticky header
         <div className="rounded-xl border border-slate-200 overflow-hidden">
           {/* This box is constrained to the card width (screen-width container) */}
-          <div className="w-full max-h-[520px] overflow-x-auto overflow-y-auto">
+          <div
+            className="w-full max-h-[520px] overflow-x-auto overflow-y-auto"
+            aria-label={`${title} table`}
+          >
             {/* Table can be wider than the box; scroll happens on the box */}
-            <table className="w-max text-sm table-fixed">
+            <table className="w-max text-[13px] leading-5 table-fixed">
 
               <colgroup>
                 {cols.map((c) => (
@@ -223,14 +226,15 @@ function Table({
                 ))}
               </colgroup>
 
-              <thead className="bg-slate-50 sticky top-0 z-10">
+              <thead className="bg-slate-50 sticky top-0 z-10 border-b border-slate-200">
                 <tr>
                   {cols.map((c) => {
                     const textHeavy = isTextHeavyCol(c);
                     return (
                       <th
                         key={c}
-                        className={`text-left px-2 py-1 text-xs font-semibold text-slate-700 align-top ${
+                        scope="col"
+                        className={`text-left px-2 py-2 text-xs font-semibold text-slate-800 align-top ${
                           textHeavy ? "break-words" : "whitespace-nowrap"
                         }`}
                       >
@@ -243,13 +247,18 @@ function Table({
 
               <tbody>
                 {slice.map((r, idx) => (
-                  <tr key={idx} className="border-t border-slate-100">
+                  <tr
+                    key={idx}
+                    className={
+                      "border-t border-slate-200/60 " + (idx % 2 === 0 ? "bg-white" : "bg-slate-50/40")
+                    }
+                  >
                     {cols.map((c) => {
                       const textHeavy = isTextHeavyCol(c);
                       return (
                         <td
                           key={c}
-                          className={`px-2 py-1 text-xs leading-snug text-slate-800 align-top ${
+                          className={`px-2 py-2 text-[13px] leading-5 text-slate-800 align-top ${
                             textHeavy ? "break-words" : "whitespace-nowrap"
                           }`}
                         >
@@ -338,12 +347,76 @@ export default function Home() {
     }
   }
 
+  const steps = [
+    { n: 1 as const, label: "Enter course" },
+    { n: 2 as const, label: "Upload CSVs" },
+    { n: 3 as const, label: "Review insights" },
+  ];
+
+  const canGoToStep = (n: 1 | 2 | 3) => {
+    if (n <= step) return true;
+    // Avoid changing behavior: only allow step 3 navigation once results exist.
+    return n === 3 && !!result;
+  };
+
   return (
-    <main className="min-h-screen bg-slate-100">
-      {/* Screen-width container (centered), with normal padding */}
-      <div className="mx-auto max-w-screen-2xl px-6 py-6">
-        <div className="text-2xl font-bold text-slate-900 mb-1">CLE Analytics Dashboard</div>
-        <div className="text-sm text-slate-600 mb-6">Vercel (Frontend) + Render (Backend)</div>
+    <main className="min-h-screen">
+      {/* Screen-width container (centered) */}
+      <div className="mx-auto max-w-screen-2xl px-6 py-8">
+        <header className="mb-6">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div>
+              <h1 className="text-2xl font-semibold tracking-tight text-slate-900">CLE Analytics Dashboard</h1>
+              <p className="mt-1 text-sm text-slate-600">Canvas Gradebook + Echo360 analytics</p>
+            </div>
+            <div className="text-xs text-slate-500">Vercel (Frontend) + Render (Backend)</div>
+          </div>
+          <div className="mt-5 border-t border-slate-200" />
+
+          {/* Stepper */}
+          <nav aria-label="Progress" className="mt-5">
+            <ol className="flex flex-wrap gap-2">
+              {steps.map((s) => {
+                const isActive = s.n === step;
+                const isComplete = s.n < step;
+                const disabled = !canGoToStep(s.n);
+                return (
+                  <li key={s.n} className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => !disabled && setStep(s.n)}
+                      disabled={disabled}
+                      aria-current={isActive ? "step" : undefined}
+                      className={
+                        "group inline-flex items-center gap-2 rounded-xl border px-3 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-csuGreen disabled:opacity-50 disabled:cursor-not-allowed " +
+                        (isActive
+                          ? "border-slate-900 bg-slate-900 text-white"
+                          : isComplete
+                          ? "border-slate-200 bg-white text-slate-800"
+                          : "border-slate-200 bg-white text-slate-700")
+                      }
+                    >
+                      <span
+                        className={
+                          "inline-flex h-6 w-6 items-center justify-center rounded-full text-xs font-semibold " +
+                          (isActive
+                            ? "bg-white/15 text-white"
+                            : isComplete
+                            ? "bg-slate-100 text-slate-800"
+                            : "bg-slate-100 text-slate-700")
+                        }
+                        aria-hidden="true"
+                      >
+                        {s.n}
+                      </span>
+                      <span className="truncate">{s.label}</span>
+                    </button>
+                  </li>
+                );
+              })}
+            </ol>
+          </nav>
+        </header>
 
         {error && (
           <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
@@ -352,51 +425,54 @@ export default function Home() {
         )}
 
         {step === 1 && (
-          <div className="rounded-2xl bg-white shadow p-6">
-            <div className="text-lg font-semibold text-slate-900 mb-2">Step 1: Enter Course</div>
+          <section aria-label="Enter course" className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-2">Step 1: Enter Course</h2>
             <div className="text-sm text-slate-600 mb-3">
               Use the numeric Canvas Course ID (the number in the course URL).
             </div>
 
-            <label className="block text-sm text-slate-700 mb-1">Canvas Course ID</label>
+            <label className="block text-sm font-medium text-slate-800 mb-1">Canvas Course ID</label>
             <input
               value={courseId}
               onChange={(e) => setCourseId(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              className="w-full"
               placeholder="e.g., 123456"
             />
 
             <div className="mt-4 flex gap-2">
-              <button onClick={() => setStep(2)} className="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm">
+              <button
+                onClick={() => setStep(2)}
+                className="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-csuGreen"
+              >
                 Continue
               </button>
             </div>
-          </div>
+          </section>
         )}
 
         {step === 2 && (
-          <div className="rounded-2xl bg-white shadow p-6">
-            <div className="text-lg font-semibold text-slate-900 mb-2">Step 2: Upload CSVs</div>
+          <section aria-label="Upload CSVs" className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
+            <h2 className="text-lg font-semibold text-slate-900 mb-2">Step 2: Upload CSVs</h2>
 
             <div className="grid md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm text-slate-700 mb-1">Canvas Gradebook CSV</label>
+                <label className="block text-sm font-medium text-slate-800 mb-1">Canvas Gradebook CSV</label>
                 <input
                   type="file"
                   accept=".csv"
                   onChange={(e) => setCanvasCsv(e.target.files?.[0] ?? null)}
-                  className="w-full text-sm"
+                  className="w-full"
                 />
                 <div className="text-xs text-slate-500 mt-1">{canvasCsv ? canvasCsv.name : "No file selected"}</div>
               </div>
 
               <div>
-                <label className="block text-sm text-slate-700 mb-1">Echo360 Analytics CSV</label>
+                <label className="block text-sm font-medium text-slate-800 mb-1">Echo360 Analytics CSV</label>
                 <input
                   type="file"
                   accept=".csv"
                   onChange={(e) => setEchoCsv(e.target.files?.[0] ?? null)}
-                  className="w-full text-sm"
+                  className="w-full"
                 />
                 <div className="text-xs text-slate-500 mt-1">{echoCsv ? echoCsv.name : "No file selected"}</div>
               </div>
@@ -405,7 +481,7 @@ export default function Home() {
             <div className="mt-6 flex items-center gap-3">
               <button
                 onClick={() => setStep(1)}
-                className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm text-slate-800"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 hover:bg-slate-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-csuGreen"
               >
                 Back
               </button>
@@ -413,36 +489,54 @@ export default function Home() {
               <button
                 onClick={runAnalysis}
                 disabled={loading}
-                className="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm disabled:opacity-60"
+                className="rounded-xl bg-slate-900 text-white px-4 py-2 text-sm hover:bg-slate-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-csuGreen disabled:opacity-60"
               >
                 {loading ? "Running..." : "Run Analysis"}
               </button>
             </div>
-          </div>
+          </section>
         )}
 
         {step === 3 && (
           <div>
-            <div className="mb-4 flex flex-wrap gap-2">
-              {(["tables", "charts", "ai"] as const).map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setActiveTab(t)}
-                  className={`rounded-xl px-4 py-2 text-sm ${
-                    activeTab === t ? "bg-slate-900 text-white" : "bg-white border border-slate-200 text-slate-800"
-                  }`}
-                >
-                  {t === "tables"
-                    ? "Tables"
-                    : t === "charts"
-                    ? "Charts"
-                    : "AI Analysis"}
-                </button>
-              ))}
+            {/* Tabs */}
+            <div
+              role="tablist"
+              aria-label="Insights"
+              className="mb-4 inline-flex flex-wrap gap-2 rounded-2xl bg-white border border-slate-200 p-2"
+            >
+              {(["tables", "charts", "ai"] as const).map((t) => {
+                const label = t === "tables" ? "Tables" : t === "charts" ? "Charts" : "AI Analysis";
+                const selected = activeTab === t;
+                return (
+                  <button
+                    key={t}
+                    role="tab"
+                    id={`tab-${t}`}
+                    aria-selected={selected}
+                    aria-controls={`panel-${t}`}
+                    tabIndex={selected ? 0 : -1}
+                    onClick={() => setActiveTab(t)}
+                    className={
+                      "rounded-xl px-4 py-2 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-csuGreen " +
+                      (selected
+                        ? "bg-slate-900 text-white"
+                        : "bg-white border border-slate-200 text-slate-900 hover:bg-slate-50")
+                    }
+                  >
+                    {label}
+                  </button>
+                );
+              })}
             </div>
 
             {activeTab === "tables" && (
-              <div className="grid gap-4">
+              <div
+                role="tabpanel"
+                id="panel-tables"
+                aria-labelledby="tab-tables"
+                className="grid gap-4"
+              >
                 <Table
                   title="Echo Summary"
                   rows={echoSummary}
@@ -482,13 +576,18 @@ export default function Home() {
             )}
 
             {activeTab === "charts" && (
-              <div className="grid gap-4">
-                <div className="rounded-2xl bg-white shadow p-6">
+              <div
+                role="tabpanel"
+                id="panel-charts"
+                aria-labelledby="tab-charts"
+                className="grid gap-4"
+              >
+                <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
                   <div className="text-lg font-semibold text-slate-900 mb-2">Echo Chart</div>
                   <EchoComboChart moduleRows={echoModules as any} />
                 </div>
 
-                <div className="rounded-2xl bg-white shadow p-6">
+                <div className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6">
                   <div className="text-lg font-semibold text-slate-900 mb-2">Gradebook Chart</div>
                   <GradebookComboChart rows={gradeModuleMetrics as any} />
                 </div>
@@ -496,7 +595,12 @@ export default function Home() {
             )}
 
             {activeTab === "ai" && (
-              <div className="rounded-2xl bg-white shadow p-6">
+              <div
+                role="tabpanel"
+                id="panel-ai"
+                aria-labelledby="tab-ai"
+                className="rounded-2xl bg-white border border-slate-200 shadow-sm p-6"
+              >
                 <div className="text-lg font-semibold text-slate-900 mb-2">AI Analysis</div>
                 {result?.analysis?.error ? (
                   <div className="text-sm text-red-700">{result.analysis.error}</div>
