@@ -249,7 +249,7 @@ function Table({
                 {slice.map((r, idx) => (
                   <tr
                     key={idx}
-                    className="border-t border-slate-200/60"
+                    className="border-t border-slate-300/70 hover:bg-slate-100/70"
                   >
 
                     {cols.map((c) => {
