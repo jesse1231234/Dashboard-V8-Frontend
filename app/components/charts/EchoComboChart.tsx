@@ -145,7 +145,7 @@ export default function EchoComboChart({
               }}
               labelFormatter={(label) => String(label)}
             />
-            <Legend verticalAlign="top" align="left" />
+            <Legend verticalAlign="top" align="left" wrapperStyle={{ paddingBottom: 8 }} />
 
             {/* Stacked bars on count axis */}
             {hasStack && (
