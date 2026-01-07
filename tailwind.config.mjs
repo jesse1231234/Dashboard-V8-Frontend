@@ -1,18 +1,27 @@
-/** @type {import('tailwindcss').Config} */
-const config = {
+// tailwind.config.mjs
+import type { Config } from "tailwindcss";
+
+const config: Config = {
   content: [
     "./app/**/*.{js,ts,jsx,tsx}",
-    "./components/**/*.{js,ts,jsx,tsx}"
+    "./components/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
+      borderRadius: {
+        xl: "0.9rem",
+        "2xl": "1.1rem",
+      },
+      ringColor: {
+        DEFAULT: "#1E4D2B",
+      },
       colors: {
         csuGreen: "#1E4D2B",
-        csuGold: "#C8C372"
-      }
-    }
+        csuGold: "#C8C372",
+      },
+    },
   },
-  plugins: []
+  plugins: [],
 };
 
 export default config;
