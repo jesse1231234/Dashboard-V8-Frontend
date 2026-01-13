@@ -22,7 +22,7 @@ type Row = Record<string, any>;
 const CSU_GREEN = "#1E54B3";
 const CSU_ORANGE = "#94B0E3";
 const CSU_BLUE = "#F58D0F";
-const CSU_RED = "#EEFA43";
+const CSU_RED = "#C91CAD";
 
 function toNumber(v: any): number | null {
   if (v === null || v === undefined || v === "") return null;
