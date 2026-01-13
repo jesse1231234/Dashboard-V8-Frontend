@@ -15,8 +15,14 @@ import {
 
 type Row = Record<string, any>;
 
+/* === Color palette ===
+   Bars:   green + orange
+   Lines:  blue + red
+*/
 const CSU_GREEN = "#1E4D2B";
 const CSU_ORANGE = "#D9782D";
+const CSU_BLUE = "#1E3A8A";
+const CSU_RED = "#B91C1C";
 
 function toNumber(v: any): number | null {
   if (v === null || v === undefined || v === "") return null;
@@ -80,7 +86,7 @@ export default function EchoComboChart({
       const notViewing =
         viewers !== null && total !== null ? Math.max(0, total - viewers) : null;
 
-      // Convert percents to 0–100 scale for the right axis
+      // Percent values scaled to 0–100 for right axis
       const overallPct = overallKey ? toNumber(r[overallKey]) : null;
       const avgPct = avgKey ? toNumber(r[avgKey]) : null;
 
@@ -102,9 +108,10 @@ export default function EchoComboChart({
 
   return (
     <div className="w-full">
-      {title ? <div className="text-sm font-semibold text-slate-900 mb-2">{title}</div> : null}
+      {title ? (
+        <div className="text-sm font-semibold text-slate-900 mb-2">{title}</div>
+      ) : null}
 
-      {/* Give the chart more height so rotated labels have room */}
       <div className="h-[520px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
@@ -123,11 +130,7 @@ export default function EchoComboChart({
             />
 
             {/* Left axis = counts */}
-            <YAxis
-              yAxisId="count"
-              allowDecimals={false}
-              width={40}
-            />
+            <YAxis yAxisId="count" allowDecimals={false} width={40} />
 
             {/* Right axis = percentages */}
             <YAxis
@@ -140,14 +143,15 @@ export default function EchoComboChart({
 
             <Tooltip
               formatter={(value: any, name: any) => {
-                if (name?.toLowerCase?.().includes("%")) return [`${value?.toFixed?.(1) ?? value}%`, name];
+                if (name?.toLowerCase?.().includes("%"))
+                  return [`${value?.toFixed?.(1) ?? value}%`, name];
                 return [value, name];
               }}
               labelFormatter={(label) => String(label)}
             />
             <Legend verticalAlign="top" align="left" wrapperStyle={{ paddingBottom: 8 }} />
 
-            {/* Stacked bars on count axis */}
+            {/* Stacked bars */}
             {hasStack && (
               <>
                 <Bar
@@ -167,14 +171,14 @@ export default function EchoComboChart({
               </>
             )}
 
-            {/* Lines on pct axis */}
+            {/* Lines */}
             {hasOverall && (
               <Line
                 yAxisId="pct"
                 type="monotone"
                 dataKey="__overallPct"
                 name="Overall View %"
-                stroke={CSU_ORANGE}
+                stroke={CSU_BLUE}
                 dot={false}
                 strokeWidth={2}
               />
@@ -186,7 +190,7 @@ export default function EchoComboChart({
                 type="monotone"
                 dataKey="__avgPct"
                 name="Average View %"
-                stroke={CSU_GREEN}
+                stroke={CSU_RED}
                 dot={false}
                 strokeWidth={2}
               />
@@ -197,7 +201,8 @@ export default function EchoComboChart({
 
       {!hasStack && (
         <div className="text-xs text-slate-500 mt-2">
-          Note: stacked bars require both “# of Students Viewing” and “# of Students” (or studentsTotal).
+          Note: stacked bars require both “# of Students Viewing” and “# of Students”
+          (or <code>studentsTotal</code>).
         </div>
       )}
     </div>
