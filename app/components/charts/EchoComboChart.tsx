@@ -19,10 +19,10 @@ type Row = Record<string, any>;
    Bars:   green + orange
    Lines:  blue + red
 */
-const CSU_GREEN = "#1E4D2B";
-const CSU_ORANGE = "#D9782D";
-const CSU_BLUE = "#1E3A8A";
-const CSU_RED = "#B91C1C";
+const CSU_GREEN = "#1E54B3";
+const CSU_ORANGE = "#94B0E3";
+const CSU_BLUE = "#F58D0F";
+const CSU_RED = "#EEFA43";
 
 function toNumber(v: any): number | null {
   if (v === null || v === undefined || v === "") return null;
